@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Quiz Mastermind</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background-color: #000;
+      color: #00ffcc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 700px;
+      margin-bottom: 30px;
+    }
+    .score, .lives, .timer {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .question-box {
+      background: #111;
+      border: 2px solid #00ffcc;
+      box-shadow: 0 0 15px #00ffcc;
+      padding: 30px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 700px;
+      text-align: center;
+    }
+    #answerInput {
+      margin-top: 15px;
+      width: 80%;
+      padding: 10px;
+      font-size: 18px;
+      background: #000;
+      color: #00ffcc;
+      border: 1px solid #00ffcc;
+    }
+    #submitBtn, #restartBtn, #passBtn {
+      margin-top: 15px;
+      margin-right: 10px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #00ffcc;
+      color: #000;
+      border: none;
+      cursor: pointer;
+    }
+    #submitBtn:hover, #restartBtn:hover, #passBtn:hover {
+      background: #00e6b8;
+    }
+    .game-over {
+      font-size: 32px;
+      margin-top: 30px;
+      color: red;
+    }
+    .final-score {
+      font-size: 22px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="score" id="scoreDisplay">Score: 0</div>
+    <div class="lives" id="livesDisplay">❤️❤️❤️</div>
+    <div class="timer" id="timerDisplay">Time: 120s</div>
+  </div>
+  <div class="question-box">
+    <div id="question">Loading question...</div>
+    <input type="text" id="answerInput" placeholder="Type your answer here" />
+    <div id="choiceContainer" style="margin-top: 15px;"></div>
+    <button id="submitBtn">Submit</button>
+    <button id="passBtn">Pass</button>
+  </div>
+  <div class="game-over" id="gameOverMsg" style="display: none;">Game Over</div>
+  <div class="final-score" id="finalScore" style="display: none;"></div>
+  <button id="restartBtn" style="display: none;">Restart</button>
+
+  <script>
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let lives = 3;
+    let timer = 120;
+    let timerInterval;
+
+    const questionEl = document.getElementById("question");
+    const scoreEl = document.getElementById("scoreDisplay");
+    const livesEl = document.getElementById("livesDisplay");
+    const timerDisplay = document.getElementById("timerDisplay");
+    const answerInput = document.getElementById("answerInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const passBtn = document.getElementById("passBtn");
+    const choiceContainer = document.getElementById("choiceContainer");
+    const gameOverMsg = document.getElementById("gameOverMsg");
+    const finalScore = document.getElementById("finalScore");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const fallbackQuestions = [
+      { q: "Which country is home to the Great Pyramid of Giza?", a: "egypt", options: null },
+      { q: "What gas do humans need to breathe?", a: "oxygen", options: null },
+      { q: "Which of the following is a planet?", a: "mars", options: ["mars", "pluto", "ceres", "moon"] },
+    ];
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function updateUI() {
+      scoreEl.textContent = `Score: ${score}`;
+      livesEl.textContent = "❤️".repeat(lives);
+      timerDisplay.textContent = `Time: ${timer}s`;
+    }
+
+    function showChoices(choices) {
+      choiceContainer.innerHTML = "";
+      if (!choices) return;
+      choices.forEach(choice => {
+        const btn = document.createElement("button");
+        btn.textContent = choice;
+        btn.style.margin = "5px";
+        btn.style.padding = "10px";
+        btn.style.fontSize = "16px";
+        btn.style.cursor = "pointer";
+        btn.style.backgroundColor = "#222";
+        btn.style.color = "#00ffcc";
+        btn.style.border = "1px solid #00ffcc";
+        btn.onclick = () => checkAnswer(choice.toLowerCase());
+        choiceContainer.appendChild(btn);
+      });
+    }
+
+    function loadQuestion() {
+      if (currentQuestionIndex >= questions.length) {
+        shuffle(questions);
+        currentQuestionIndex = 0;
+      }
+      const current = questions[currentQuestionIndex];
+      questionEl.innerHTML = current.q;
+      answerInput.value = "";
+      showChoices(current.options);
+      answerInput.style.display = current.options ? "none" : "inline-block";
+      submitBtn.style.display = current.options ? "none" : "inline-block";
+    }
+
+    function checkAnswer(userAnswer) {
+      const correctAnswer = questions[currentQuestionIndex].a.toLowerCase();
+      if (userAnswer === correctAnswer) {
+        score++;
+      } else {
+        lives--;
+      }
+      currentQuestionIndex++;
+      updateUI();
+      if (lives === 0) {
+        endGame();
+      } else {
+        loadQuestion();
+      }
+    }
+
+    function endGame() {
+      clearInterval(timerInterval);
+      document.querySelector(".question-box").style.display = "none";
+      gameOverMsg.style.display = "block";
+      finalScore.style.display = "block";
+      finalScore.textContent = `Your Score: ${score}`;
+      restartBtn.style.display = "inline-block";
+    }
+
+    function restartGame() {
+      score = 0;
+      lives = 3;
+      timer = 120;
+      currentQuestionIndex = 0;
+      document.querySelector(".question-box").style.display = "block";
+      gameOverMsg.style.display = "none";
+      finalScore.style.display = "none";
+      restartBtn.style.display = "none";
+      updateUI();
+      shuffle(questions);
+      loadQuestion();
+      startTimer();
+    }
+
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        timer--;
+        updateUI();
+        if (timer <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    submitBtn.addEventListener("click", () => {
+      const userAnswer = answerInput.value.trim().toLowerCase();
+      checkAnswer(userAnswer);
+    });
+
+    passBtn.addEventListener("click", () => {
+      currentQuestionIndex++;
+      loadQuestion();
+    });
+
+    restartBtn.addEventListener("click", restartGame);
+
+    async function fetchQuestions() {
+      try {
+        const res = await fetch("https://opentdb.com/api.php?amount=100&type=multiple");
+        const data = await res.json();
+        questions = data.results.map((item) => ({
+          q: item.question.replace(/&[^;]+;/g, ""),
+          a: item.correct_answer,
+          options: shuffle([...item.incorrect_answers, item.correct_answer])
+        }));
+        shuffle(questions);
+        updateUI();
+        loadQuestion();
+        startTimer();
+      } catch (err) {
+        console.error("Fetch failed. Using fallback questions.", err);
+        questions = fallbackQuestions;
+        shuffle(questions);
+        updateUI();
+        loadQuestion();
+        startTimer();
+      }
+    }
+
+    fetchQuestions();
+  </script>
+</body>
+</html>
