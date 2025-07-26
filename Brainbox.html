@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -86,9 +85,7 @@
   </div>
   <div class="game-over" id="gameOverMsg" style="display: none;">Game Over</div>
   <div class="final-score" id="finalScore" style="display: none;"></div>
-  <button id="restartBtn" style="display: none;">Restart</button>
-
-  <script>
+  <button id="restartBtn" style="display: none;">Restart</button>  <script>
     let questions = [];
     let currentQuestionIndex = 0;
     let score = 0;
@@ -113,6 +110,12 @@
       { q: "What gas do humans need to breathe?", a: "oxygen", options: null },
       { q: "Which of the following is a planet?", a: "mars", options: ["mars", "pluto", "ceres", "moon"] },
     ];
+
+    function decodeHTML(html) {
+      const txt = document.createElement("textarea");
+      txt.innerHTML = html;
+      return txt.value;
+    }
 
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
@@ -193,13 +196,11 @@
       gameOverMsg.style.display = "none";
       finalScore.style.display = "none";
       restartBtn.style.display = "none";
-      updateUI();
-      shuffle(questions);
-      loadQuestion();
-      startTimer();
+      fetchQuestions();
     }
 
     function startTimer() {
+      clearInterval(timerInterval);
       timerInterval = setInterval(() => {
         timer--;
         updateUI();
@@ -209,27 +210,20 @@
       }, 1000);
     }
 
-    submitBtn.addEventListener("click", () => {
-      const userAnswer = answerInput.value.trim().toLowerCase();
-      checkAnswer(userAnswer);
-    });
-
-    passBtn.addEventListener("click", () => {
-      currentQuestionIndex++;
-      loadQuestion();
-    });
-
-    restartBtn.addEventListener("click", restartGame);
-
     async function fetchQuestions() {
       try {
-        const res = await fetch("https://opentdb.com/api.php?amount=100&type=multiple");
+        const res = await fetch("https://opentdb.com/api.php?amount=50&category=9&type=multiple");
         const data = await res.json();
-        questions = data.results.map((item) => ({
-          q: item.question.replace(/&[^;]+;/g, ""),
-          a: item.correct_answer,
-          options: shuffle([...item.incorrect_answers, item.correct_answer])
-        }));
+        questions = data.results
+          .filter(item => ["easy", "medium"].includes(item.difficulty) &&
+            !/(nintendo|e-sports|arcade|obscure|trivia|anime|dungeons|role\-?playing|indie|mobile)/i.test(item.question))
+          .map(item => ({
+            q: decodeHTML(item.question),
+            a: decodeHTML(item.correct_answer),
+            options: item.incorrect_answers
+              ? shuffle(item.incorrect_answers.map(decodeHTML).concat(decodeHTML(item.correct_answer)))
+              : null
+          }));
         shuffle(questions);
         updateUI();
         loadQuestion();
@@ -244,7 +238,18 @@
       }
     }
 
+    submitBtn.addEventListener("click", () => {
+      const userAnswer = answerInput.value.trim().toLowerCase();
+      checkAnswer(userAnswer);
+    });
+
+    passBtn.addEventListener("click", () => {
+      currentQuestionIndex++;
+      loadQuestion();
+    });
+
+    restartBtn.addEventListener("click", restartGame);
+
     fetchQuestions();
-  </script>
-</body>
+  </script></body>
 </html>
