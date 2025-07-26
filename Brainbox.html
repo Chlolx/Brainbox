@@ -111,12 +111,6 @@
       { q: "Which of the following is a planet?", a: "mars", options: ["mars", "pluto", "ceres", "moon"] },
     ];
 
-    function decodeHTML(html) {
-      const txt = document.createElement("textarea");
-      txt.innerHTML = html;
-      return txt.value;
-    }
-
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -217,13 +211,15 @@
         questions = data.results
           .filter(item => ["easy", "medium"].includes(item.difficulty) &&
             !/(nintendo|e-sports|arcade|obscure|trivia|anime|dungeons|role\-?playing|indie|mobile)/i.test(item.question))
-          .map(item => ({
-            q: decodeHTML(item.question),
-            a: decodeHTML(item.correct_answer),
-            options: item.incorrect_answers
-              ? shuffle(item.incorrect_answers.map(decodeHTML).concat(decodeHTML(item.correct_answer)))
-              : null
-          }));
+          .map((item, index) => {
+            const text = item.question.replace(/&[^;]+;/g, "").replace(/(<([^>]+)>)/gi, "");
+            const correct = item.correct_answer.replace(/&[^;]+;/g, "");
+            if (index % 4 === 0) {
+              return { q: text, a: correct, options: null };
+            } else {
+              return { q: text, a: correct, options: shuffle([...item.incorrect_answers.map(i => i.replace(/&[^;]+;/g, "")), correct]) };
+            }
+          });
         shuffle(questions);
         updateUI();
         loadQuestion();
